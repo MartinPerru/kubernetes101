@@ -100,8 +100,9 @@ spec:
 ```bash
 kubectl apply -f nginx-deployment.yaml
 kubectl get deployments
-kubectl get pods
+kubectl get pods -l app=nginx
 ```
+
 
 ## 5. Expose the Deployment with a ClusterIP Service
 A Kubernetes Service provides a stable network endpoint for accessing Pods. A ClusterIP Service exposes the app only inside the cluster, so other Pods can reach it using a fixed internal IP and DNS name.
@@ -126,17 +127,17 @@ spec:
 
 ```bash
 kubectl apply -f nginx-service.yaml
-kubectl get svc
+kubectl get service nginx-service
 kubectl get endpoints
 kubectl describe service nginx-service
 ```
 
 This creates an internal service that routes traffic to the Pods selected by the `app: nginx` label.
 
-## 6. Add MongoDB to the deployment
-To let your app talk to MongoDB, create a second deployment and expose it through a Service. Your Nginx or application container should connect to the Mongo service using the internal DNS name `mongodb-service` instead of a Pod IP.
+## 6. Add MongoDB
+Create a second deployment and expose it through a Service.
 
-Example: mongo-deployment-service.yaml
+Example: mongo-deployment-and-service.yaml
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -175,25 +176,36 @@ spec:
 ```
 
 ```bash
-kubectl apply -f mongo-deployment-service.yaml
+kubectl apply -f mongo-deployment-and-service.yaml
 kubectl get deployment mongo-deployment
 kubectl get svc mongo-service
 kubectl get endpoints
-kubectl describe service nginx-service
+```
+## 7. Try to reach Mongo service from nginx pods
+Execute a shell from a nginx pod and run a curl command to the mongo db service. 
+
+```bash
+kubectl get pods -l app=nginx
+kubectl exec -it nginx-deployment-pod-name -- bash
+curl mongodb-service:27017
 ```
 
+## 8. Playing with Deployments
+Update image for nginx and see the rollout history. 
 
-## 7. Scale the Deployment
 ```bash
-kubectl scale deployment nginx-deployment --replicas=5
-kubectl get pods
-```
-
-## 8. Update the Deployment
-```bash
+kubectl describe pods -l app=nginx 
 kubectl set image deployment/nginx-deployment nginx=nginx:1.25
 kubectl rollout history deployment/nginx-deployment
 kubectl rollout undo deployment/nginx-deployment
+```
+
+Scale the replicas for a deployment.
+
+```bash
+kubectl get pods -l app=nginx 
+kubectl scale deployment nginx-deployment --replicas=5
+kubectl get pods -l app=nginx 
 ```
 
 
