@@ -104,10 +104,13 @@ kubectl get pods -l app=nginx
 ```
 
 
-## 5. Expose the Deployment with a ClusterIP Service
-A Kubernetes Service provides a stable network endpoint for accessing Pods. A ClusterIP Service exposes the app only inside the cluster, so other Pods can reach it using a fixed internal IP and DNS name.
+## 5. Expose the Deployment with a Service
+A Kubernetes Service provides a stable network endpoint for accessing Pods. The service type decides how the application is exposed: inside the cluster, on a node port, or through a cloud load balancer.
 Reference:
 https://kubernetes.io/docs/concepts/services-networking/service/
+
+## 5.1 ClusterIP (internal only)
+A ClusterIP Service exposes the app only inside the cluster, so other Pods can reach it using a fixed internal IP and DNS name.
 
 Example: nginx-service.yaml
 ```yaml
@@ -133,6 +136,52 @@ kubectl describe service nginx-service
 ```
 
 This creates an internal service that routes traffic to the Pods selected by the `app: nginx` label.
+
+## 5.2 NodePort (expose on each node)
+A NodePort Service opens the app on a static port across all cluster nodes, so it can be reached from outside the cluster using `NodeIP:NodePort`.
+
+Example:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nodeport-example
+spec:
+  type: NodePort
+  selector:
+    app: nginx
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30080
+```
+
+This exposes the service on port `30080` on each node, which is useful for local demos and simple external access.
+
+## 5.3 LoadBalancer (cloud-managed external access)
+A LoadBalancer Service creates an external load balancer in supported cloud environments and forwards traffic to the service automatically. In this example we are showing a GKE regional external load balancer.
+
+Example:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-gke-loadbalancer-example
+spec:
+  type: LoadBalancer
+  loadBalancerClass: networking.gke.io/l4-regional-external
+  selector:
+    app: nginx
+  ports:
+  - name: tcp-port
+    protocol: TCP
+    port: 8080
+    targetPort: 80
+```
+
+
+In cloud providers like AWS, Azure, or GCP, this typically creates a public IP or DNS name that routes traffic to your Pods.
 
 ## 6. Add MongoDB
 Create a second deployment and expose it through a Service.
