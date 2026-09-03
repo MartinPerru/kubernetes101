@@ -1,5 +1,4 @@
 # Kubernetes Demo
-
 ## 8. Playing with Deployments
 
 ## 8.1 Update MongoDB Deployment
@@ -84,7 +83,7 @@ To run the initialization again, delete the MongoDB Pod and its data first. This
 kubectl delete pod -l app=mongo
 kubectl rollout status deployment/mongodb-deployment
 ```
-## 7. Update nginx deployment
+## 8.2 Update nginx deployment
 Nginx does not understand MongoDB's protocol, so the Deployment uses a sidecar container to query MongoDB. The sidecar gets the connection details from `mongo-client-settings`, writes the movie results to a shared volume, and Nginx serves the generated page.
 
 ```bash
