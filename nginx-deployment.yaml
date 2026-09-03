@@ -17,3 +17,72 @@ spec:
         image: nginx:latest
         ports:
         - containerPort: 80
+        volumeMounts:
+        - name: movie-page
+          mountPath: /usr/share/nginx/html
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+      - name: movie-page-refresh
+        image: mongo:7
+        command: ["sh", "/config/refresh.sh"]
+        envFrom:
+        - configMapRef:
+            name: mongo-client-settings
+        volumeMounts:
+        - name: movie-page
+          mountPath: /usr/share/nginx/html
+        - name: movie-refresh
+          mountPath: /config
+      volumes:
+      - name: movie-page
+        emptyDir: {}
+      - name: nginx-config
+        configMap:
+          name: nginx-movies-config
+      - name: movie-refresh
+        configMap:
+          name: nginx-movies-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-client-settings
+data:
+  MONGO_HOST: mongodb-service
+  MONGO_PORT: "27017"
+  MONGO_DATABASE: movies
+  MONGO_COLLECTION: movies
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-movies-config
+data:
+  default.conf: |
+    server {
+      listen 80;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+    }
+  refresh.sh: |
+    set -eu
+    while true; do
+      temporary_file=/usr/share/nginx/html/index.html.tmp
+      {
+        cat <<'HTML'
+    <!doctype html>
+    <html>
+    <head><meta charset="utf-8"><title>Movies from MongoDB</title></head>
+    <body><h1>Movies from MongoDB</h1><pre>
+    HTML
+        mongosh "mongodb://${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}" --quiet --eval "db.${MONGO_COLLECTION}.find({}, {_id: 0}).forEach(movie => printjson(movie))"
+        cat <<'HTML'
+    </pre></body>
+    </html>
+    HTML
+      } > "${temporary_file}"
+      mv "${temporary_file}" /usr/share/nginx/html/index.html
+      sleep 30
+    done

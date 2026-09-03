@@ -19,7 +19,14 @@ spec:
         - containerPort: 27017
         env:
         - name: MONGO_INITDB_DATABASE
-          value: demo
+          value: movies
+        volumeMounts:
+        - name: mongo-init
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: mongo-init
+        configMap:
+          name: mongo-init
 ---
 apiVersion: v1
 kind: Service
@@ -32,3 +39,28 @@ spec:
   - protocol: TCP
     port: 27017
     targetPort: 27017
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-init
+data:
+  init.js: |
+    db = db.getSiblingDB("movies");
+    db.movies.insertMany([
+      {
+        title: "The Matrix",
+        year: 1999,
+        genres: ["Action", "Science Fiction"]
+      },
+      {
+        title: "Spirited Away",
+        year: 2001,
+        genres: ["Animation", "Fantasy"]
+      },
+      {
+        title: "The Grand Budapest Hotel",
+        year: 2014,
+        genres: ["Comedy", "Drama"]
+      }
+    ]);
